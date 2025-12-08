@@ -225,9 +225,6 @@ python src/main.py composite image1.png black output.png --mode columns
 Creates a composite where the original image alternates with pure black columns.
 
 
-
-## Development
-
 ### Running the Program
 
 ```bash
@@ -240,23 +237,11 @@ View help for specific commands:
 python src/main.py composite --help
 ```
 
-### Future Enhancements
-
-- [x] Implement row-based compositing algorithm
-- [x] Implement column-based compositing algorithm
-- [x] Add input validation (matching dimensions and channels)
-- [x] Add error handling and user-friendly error messages
-- [ ] Add batch processing support
-- [ ] Add GUI interface with tkinter or PyQt
-- [ ] Add web interface with Flask/Django
-- [ ] Add unit tests and integration tests
-- [ ] Add performance benchmarks
-- [ ] Support for different alternation patterns (e.g., diagonal, custom)
-
 ## Quick Start
 
 1. **Clone/navigate to repository**:
 ```bash
+git clone https://github.com/rooomba/image-interlacement
 cd image-interlacement-program
 ```
 
@@ -270,18 +255,7 @@ pip install -r requirements.txt
 python src/main.py composite photo1.jpg photo2.jpg output.jpg --mode rows
 ```
 
-4. **For additional usage info**:
-```bash
-python src/main.py --help
-python src/main.py composite --help
-```
-
 ## Troubleshooting
-
-### Image Dimension Mismatch
-- **Old Behavior**: Would throw an error
-- **New Behavior**: The smaller image is automatically tiled to match the larger image's dimensions
-- No action required! The program handles different sized images seamlessly.
 
 ### Unsupported Image Format
 - **Error**: "Cannot identify image file"
@@ -291,17 +265,6 @@ python src/main.py composite --help
 - **Error**: Image mode mismatch
 - **Solution**: The program automatically converts to RGB if needed. No action required.
 
-## License
-
-[Add license information here]
-
-## Contributing
-
-[Add contribution guidelines here]
-
-## Releasing New Versions
-
-To learn how to create and publish new releases, see [RELEASE.md](./RELEASE.md).
 
 ## Support
 
