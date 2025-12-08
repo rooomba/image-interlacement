@@ -3,7 +3,12 @@
 import argparse
 import sys
 from pathlib import Path
-from .composite import composite, interlace
+
+# Support both direct execution (python src/main.py) and package imports (pip install / image-interlacement)
+try:
+    from .composite import composite, interlace
+except ImportError:
+    from composite import composite, interlace
 
 
 def main():
