@@ -28,6 +28,28 @@ Before creating a release, ensure:
 - [ ] Update `CHANGELOG.md` with a summary of changes for this version
 - [ ] Verify the program works locally: `./.venv/bin/python src/main.py --help`
 
+## ⚠️ CRITICAL: Version Sync Check
+
+**Before pushing any release tag, verify that version numbers match everywhere:**
+
+```bash
+# Check pyproject.toml version
+grep 'version = ' pyproject.toml
+
+# Check src/__init__.py version
+grep '__version__' src/__init__.py
+
+# These MUST match (e.g., both 0.2.0)
+# If they don't match, PyPI will reject the upload with:
+# "File already exists ... See https://pypi.org/help/#file-name-reuse"
+```
+
+**Required version files:**
+- `pyproject.toml`: `version = "X.Y.Z"`
+- `src/__init__.py`: `__version__ = "X.Y.Z"`
+
+Both must have **identical version numbers** before pushing a release tag.
+
 ## Versioning
 
 This project uses [Semantic Versioning](https://semver.org/) (MAJOR.MINOR.PATCH).
@@ -44,13 +66,25 @@ version = "0.1.0"  # Update this before releasing
 
 ## Release Steps
 
-### 1. Update Version Number
+### 1. Update Version Numbers (BOTH files)
 
-Edit `pyproject.toml` and bump the version:
+**CRITICAL:** Update the version in **both** files to the same value:
 
-```toml
-[project]
-version = "0.2.0"  # Example: from 0.1.0 to 0.2.0
+```bash
+# Edit pyproject.toml
+nano pyproject.toml
+# Change: version = "0.1.0" → version = "0.2.0"
+
+# Edit src/__init__.py
+nano src/__init__.py
+# Change: __version__ = "0.1.0" → __version__ = "0.2.0"
+```
+
+Then verify they match:
+```bash
+grep 'version = ' pyproject.toml
+grep '__version__' src/__init__.py
+# Both should show 0.2.0
 ```
 
 ### 2. Update CHANGELOG (if it exists)
@@ -72,14 +106,17 @@ Add an entry at the top of `CHANGELOG.md`:
 - Behavior change Z
 ```
 
-### 3. Commit Changes
+### 3. Commit All Changes
 
-Commit the version update:
+Commit both the version updates and changelog:
 
 ```bash
-git add pyproject.toml CHANGELOG.md
+git add pyproject.toml src/__init__.py CHANGELOG.md
 git commit -m "Bump version to 0.2.0"
+git push image-interlacement master
 ```
+
+**Wait for the push to complete before proceeding to step 4.**
 
 ### 4. Create and Push a Git Tag
 
@@ -87,8 +124,7 @@ Create a tag matching the version (must start with `v`):
 
 ```bash
 git tag -a v0.2.0 -m "Release version 0.2.0"
-git push origin main
-git push origin v0.2.0
+git push image-interlacement v0.2.0
 ```
 
 This triggers the GitHub Actions workflow.
@@ -117,7 +153,51 @@ Update README or create a release announcement in your issue tracker or docs.
 
 ## Troubleshooting
 
-### PyPI Publishing Fails
+### PyPI Publishing Fails with "File already exists"
+
+**Error message:**
+```
+HTTPError: 400 Bad Request ... File already exists 
+('image_interlacement-0.1.0-py3-none-any.whl', ...)
+See https://pypi.org/help/#file-name-reuse for more information.
+```
+
+**Cause**: Version mismatch between git tag and `pyproject.toml`:
+- You pushed tag `v0.2.0` but `pyproject.toml` still says `version = "0.1.0"`
+- GitHub Actions builds using the version from `pyproject.toml`, creating a wheel for 0.1.0
+- PyPI rejects it because 0.1.0 was already published
+
+**Solution** (Prevention):
+1. **Always update both version files BEFORE creating the tag:**
+   ```bash
+   # Check versions match BEFORE tagging
+   grep 'version = ' pyproject.toml     # Should show: version = "0.2.0"
+   grep '__version__' src/__init__.py   # Should show: __version__ = "0.2.0"
+   ```
+2. Commit both version files together:
+   ```bash
+   git add pyproject.toml src/__init__.py
+   git commit -m "Bump version to 0.2.0"
+   git push image-interlacement master
+   ```
+3. **Only then** create the tag:
+   ```bash
+   git tag -a v0.2.0 -m "Release version 0.2.0"
+   git push image-interlacement v0.2.0
+   ```
+
+**If you already made this mistake:**
+1. Update `pyproject.toml` and `src/__init__.py` with the correct version
+2. Commit and push: `git push image-interlacement master`
+3. Delete and recreate the tag:
+   ```bash
+   git tag -d v0.2.0
+   git push image-interlacement :v0.2.0
+   git tag -a v0.2.0 -m "Release version 0.2.0"
+   git push image-interlacement v0.2.0
+   ```
+
+### PyPI Publishing Fails (No Token)
 
 **Cause**: `PYPI_API_TOKEN` secret is not set in the GitHub repository.
 
