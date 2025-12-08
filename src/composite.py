@@ -126,14 +126,14 @@ def validate_and_load_images(image1_path: str, image2_path: str) -> tuple:
     
     # Get dimensions
     if img1 is not None:
-        width1, height1 = img1.size
+        width1, height1 = img1.size  # PIL Image.size returns (width, height)
     else:
-        height1, width1 = img1_array.shape[:2]
+        height1, width1 = img1_array.shape[:2]  # numpy array.shape returns (height, width, ...)
     
     if img2 is not None:
-        width2, height2 = img2.size
+        width2, height2 = img2.size  # PIL Image.size returns (width, height)
     else:
-        height2, width2 = img2_array.shape[:2]
+        height2, width2 = img2_array.shape[:2]  # numpy array.shape returns (height, width, ...)
     
     # Determine target dimensions (use the larger dimensions)
     target_height = max(height1, height2)
