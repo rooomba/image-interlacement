@@ -1,0 +1,10 @@
+motif 1 (odd threads)
+motif 2 (even threads)
+
+shuttle order:
+m1 pattern
+m2 pattern
+m1 tabby
+m2 tabby
+
+Test 1: currently at 199
