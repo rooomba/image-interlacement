@@ -69,3 +69,6 @@ env/
 *.jpeg
 *.gif
 output/
+test_images/
+test1_structures/
+RELEASE.md
