@@ -2,7 +2,7 @@
 
 from PIL import Image
 import numpy as np
-from typing import Literal
+from typing import Literal, List
 
 
 def create_solid_image(color: str, width: int, height: int) -> np.ndarray:
@@ -55,104 +55,76 @@ def tile_image(image_array: np.ndarray, target_height: int, target_width: int) -
     return tiled[:target_height, :target_width]
 
 
-def validate_and_load_images(image1_path: str, image2_path: str) -> tuple:
+# Define a maximum size for input images
+MAX_IMAGE_SIZE = (2000, 2000)  # (width, height)
+
+def validate_image_size(image: Image.Image) -> None:
     """
-    Load two images and resize/tile them to match dimensions.
-    
-    If images have different dimensions, the smaller image is tiled to match
-    the larger image's dimensions.
-    
-    Accepts image file paths or color names ('white' or 'black') for solid colors.
-    
+    Validate that the image does not exceed the maximum allowed size.
+
     Args:
-        image1_path: Path to the first image, or 'white'/'black' for solid color
-        image2_path: Path to the second image, or 'white'/'black' for solid color
-        
-    Returns:
-        Tuple of (img1_array, img2_array) with matching dimensions
+        image: PIL Image object to validate.
+
+    Raises:
+        ValueError: If the image exceeds the maximum size.
     """
-    # Load or create first image
-    if image1_path.lower() in ('white', 'black'):
-        # Need to get dimensions from the other image first
-        if image2_path.lower() in ('white', 'black'):
-            raise ValueError("At least one image path must be a file (not both 'white' or 'black')")
-        temp_img = Image.open(image2_path)
-        width, height = temp_img.size
-        img1_array = create_solid_image(image1_path, width, height)
-        img1_mode = 'RGB'
-    else:
-        img1 = Image.open(image1_path)
-        img1_mode = img1.mode
-        img1_array = None
-    
-    # Load or create second image
-    if image2_path.lower() in ('white', 'black'):
-        if image1_path.lower() in ('white', 'black'):
-            raise ValueError("At least one image path must be a file (not both 'white' or 'black')")
-        if img1_array is None:
-            temp_img = Image.open(image1_path)
-            width, height = temp_img.size
-        img2_array = create_solid_image(image2_path, width, height)
-        img2_mode = 'RGB'
-    else:
-        img2 = Image.open(image2_path)
-        img2_mode = img2.mode
-        img2_array = None
-    
-    # Load first image if not already loaded
-    if img1_array is None:
-        img1 = Image.open(image1_path)
-        img1_mode = img1.mode
-    else:
-        img1 = None
-    
-    # Load second image if not already loaded
-    if img2_array is None:
-        img2 = Image.open(image2_path)
-        img2_mode = img2.mode
-    else:
-        img2 = None
-    
-    # Convert palette and other modes to RGB for consistency
-    if img1 is not None and img1.mode in ('P', '1', 'L', 'RGBA'):
-        img1 = img1.convert("RGB")
-    if img2 is not None and img2.mode in ('P', '1', 'L', 'RGBA'):
-        img2 = img2.convert("RGB")
-    
-    # Convert to same mode if different
-    if img1 is not None and img2 is not None and img1.mode != img2.mode:
-        img1 = img1.convert("RGB")
-        img2 = img2.convert("RGB")
-    
-    # Get dimensions
-    if img1 is not None:
-        width1, height1 = img1.size  # PIL Image.size returns (width, height)
-    else:
-        height1, width1 = img1_array.shape[:2]  # type: ignore # numpy array.shape returns (height, width, ...)
-    
-    if img2 is not None:
-        width2, height2 = img2.size  # PIL Image.size returns (width, height)
-    else:
-        height2, width2 = img2_array.shape[:2]  # type: ignore # numpy array.shape returns (height, width, ...)
-    
-    # Determine target dimensions (use the larger dimensions)
-    target_height = max(height1, height2)
-    target_width = max(width1, width2)
-    
-    # Convert to arrays if not already done
-    if img1_array is None:
-        img1_array = np.array(img1)
-    if img2_array is None:
-        img2_array = np.array(img2)
-    
-    # Tile images if they're smaller than the target
-    if (height1, width1) != (target_height, target_width):
-        img1_array = tile_image(img1_array, target_height, target_width)
-    
-    if (height2, width2) != (target_height, target_width):
-        img2_array = tile_image(img2_array, target_height, target_width)
-    
-    return img1_array, img2_array
+    if image.width > MAX_IMAGE_SIZE[0] or image.height > MAX_IMAGE_SIZE[1]:
+        raise ValueError(
+            f"Image size {image.width}x{image.height} exceeds the maximum allowed size of {MAX_IMAGE_SIZE[0]}x{MAX_IMAGE_SIZE[1]} pixels."
+        )
+
+
+def validate_and_load_images(image_paths: List[str]) -> List[np.ndarray]:
+    """
+    Load and validate multiple images (supports 'white'/'black'), then tile to match.
+
+    - Accepts file paths and the strings 'white' or 'black' for solid colors.
+    - Enforces per-image maximum size (2000x2000) for file-based images.
+    - Requires at least one real image to define target dimensions.
+
+    Args:
+        image_paths: List of image file paths or 'white'/'black'.
+
+    Returns:
+        List of image arrays with matching dimensions.
+
+    Raises:
+        ValueError: If any file image exceeds max size or if no real image is provided.
+    """
+    real_images: List[np.ndarray] = []
+    color_flags: List[str] = []
+    max_width, max_height = 0, 0
+
+    # First pass: load real images, remember color placeholders
+    for path in image_paths:
+        if isinstance(path, str) and path.lower() in ("white", "black"):
+            color_flags.append(path.lower())
+            continue
+        img = Image.open(path)
+        validate_image_size(img)
+        img = img.convert("RGB")
+        arr = np.array(img)
+        real_images.append(arr)
+        max_width = max(max_width, img.width)
+        max_height = max(max_height, img.height)
+
+    if max_width == 0 or max_height == 0:
+        raise ValueError("At least one input must be a real image file (not all 'white'/'black').")
+
+    # Build final list following original order, creating solids where requested
+    result_images: List[np.ndarray] = []
+    real_iter = iter(real_images)
+    for path in image_paths:
+        if isinstance(path, str) and path.lower() in ("white", "black"):
+            result_images.append(create_solid_image(path, max_width, max_height))
+        else:
+            # Next real image (tile if smaller than target)
+            arr = next(real_iter)
+            if arr.shape[0] != max_height or arr.shape[1] != max_width:
+                arr = tile_image(arr, max_height, max_width)
+            result_images.append(arr)
+
+    return result_images
 
 
 def composite_rows(image1_path: str, image2_path: str, output_path: str) -> None:
@@ -173,7 +145,8 @@ def composite_rows(image1_path: str, image2_path: str, output_path: str) -> None
         image2_path: Path to the second input image
         output_path: Path to save the output composite image
     """
-    img1_array, img2_array = validate_and_load_images(image1_path, image2_path)
+    images = validate_and_load_images([image1_path, image2_path])
+    img1_array, img2_array = images[0], images[1]
     
     height, width = img1_array.shape[:2]
     
@@ -210,7 +183,8 @@ def composite_columns(image1_path: str, image2_path: str, output_path: str) -> N
         image2_path: Path to the second input image
         output_path: Path to save the output composite image
     """
-    img1_array, img2_array = validate_and_load_images(image1_path, image2_path)
+    images = validate_and_load_images([image1_path, image2_path])
+    img1_array, img2_array = images[0], images[1]
     
     height, width = img1_array.shape[:2]
     
@@ -270,7 +244,8 @@ def interlace_rows(image1_path: str, image2_path: str, output_path: str) -> None
         image2_path: Path to the second input image
         output_path: Path to save the output interlaced image
     """
-    img1_array, img2_array = validate_and_load_images(image1_path, image2_path)
+    images = validate_and_load_images([image1_path, image2_path])
+    img1_array, img2_array = images[0], images[1]
 
     height, width = img1_array.shape[:2]
 
@@ -302,7 +277,8 @@ def interlace_columns(image1_path: str, image2_path: str, output_path: str) -> N
         image2_path: Path to the second input image
         output_path: Path to save the output interlaced image
     """
-    img1_array, img2_array = validate_and_load_images(image1_path, image2_path)
+    images = validate_and_load_images([image1_path, image2_path])
+    img1_array, img2_array = images[0], images[1]
 
     height, width = img1_array.shape[:2]
 
@@ -336,3 +312,46 @@ def interlace(
         interlace_rows(image1_path, image2_path, output_path)
     else:
         interlace_columns(image1_path, image2_path, output_path)
+
+
+def composite_n_images(image_paths: List[str], output_path: str, mode: Literal['rows', 'columns'] = 'rows') -> None:
+    """
+    Create a composite image by interleaving rows or columns from multiple images.
+
+    Args:
+        image_paths: List of input image paths (up to 6).
+        output_path: Path to save the output composite image.
+        mode: 'rows' to alternate rows, 'columns' to alternate columns.
+
+    Raises:
+        ValueError: If mode is not 'rows' or 'columns', or if more than 6 images are provided.
+    """
+    if len(image_paths) > 6:
+        raise ValueError("A maximum of 6 images can be interleaved.")
+
+    if mode not in ('rows', 'columns'):
+        raise ValueError(f"Mode must be 'rows' or 'columns', got '{mode}'")
+
+    # Load and validate images
+    images = validate_and_load_images(image_paths)
+
+    # Determine output dimensions
+    height, width = images[0].shape[:2]
+    if mode == 'rows':
+        output_shape = (height * len(images), width, 3)
+    else:
+        output_shape = (height, width * len(images), 3)
+
+    # Create output array
+    output = np.zeros(output_shape, dtype=images[0].dtype)
+
+    # Interleave rows or columns
+    for i, img in enumerate(images):
+        if mode == 'rows':
+            output[i::len(images)] = img
+        else:
+            output[:, i::len(images)] = img
+
+    # Save the result
+    result_image = Image.fromarray(output)
+    result_image.save(output_path)

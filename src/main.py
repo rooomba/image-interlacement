@@ -6,32 +6,30 @@ from pathlib import Path
 
 # Support both direct execution (python src/main.py) and package imports (pip install / image-interlacement)
 try:
-    from .composite import composite, interlace
+    from .composite import composite_n_images, interlace
 except ImportError:
-    from composite import composite, interlace
+    from composite import composite_n_images, interlace
 
 
 def main():
     """Main entry point for the CLI."""
     parser = argparse.ArgumentParser(
-        description="Image Interlacing Program - Create composites by alternating rows/columns from two images",
+        description="Image Interlacing Program - Create composites by alternating rows/columns from multiple images (2-6)",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python main.py composite image1.png image2.png output.png --mode rows
-  python main.py composite image1.png image2.png output.png --mode columns
-  python main.py composite image1.png white output.png --mode rows
-  python main.py composite image1.png black output.png --mode rows
+    python main.py composite img1.png img2.png --output out.png --mode rows
+    python main.py composite img1.png img2.png img3.png --output out.png --mode columns
+    python main.py composite img1.png img2.png img3.png img4.png img5.png img6.png --output out.png --mode rows
         """
     )
     
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
     
     # Composite command
-    composite_parser = subparsers.add_parser('composite', help='Create a composite from two images')
-    composite_parser.add_argument('image1', type=str, help='First input image path, or "white"/"black" for solid color')
-    composite_parser.add_argument('image2', type=str, help='Second input image path, or "white"/"black" for solid color')
-    composite_parser.add_argument('output', type=str, help='Output image path')
+    composite_parser = subparsers.add_parser('composite', help='Create a composite from multiple images (2-6)')
+    composite_parser.add_argument('images', nargs='+', type=str, help='Input image paths (2-6); accepts "white"/"black" as solid colors')
+    composite_parser.add_argument('--output', required=True, type=str, help='Output image path (required)')
     composite_parser.add_argument('--mode', type=str, default='rows', 
                                   choices=['rows', 'columns'],
                                   help='Alternation mode: rows or columns (default: rows)')
@@ -53,7 +51,9 @@ Examples:
     
     try:
         if args.command == 'composite':
-            composite(args.image1, args.image2, args.output, args.mode)
+            if not (2 <= len(args.images) <= 6):
+                raise ValueError("Provide between 2 and 6 input images.")
+            composite_n_images(args.images, args.output, args.mode)
             print(f"✓ Composite created successfully: {args.output}")
         elif args.command == 'interlace':
             interlace(args.image1, args.image2, args.output, args.mode)
