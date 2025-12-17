@@ -8,7 +8,7 @@ version = "0.3.5"
 description = "CLI tool for creating composites by alternating rows/columns from two images"
 readme = "README.md"
 requires-python = ">=3.8"
-license = {text = "MIT"}
+license = {text = "GPLv3"}
 authors = [
     {name = "e. couture", email = "your.email@example.com"}
 ]
