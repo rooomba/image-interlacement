@@ -69,11 +69,23 @@ jobs:
             pyinstaller --onedir --hidden-import src.composite --name ${{ matrix.artifact-name }} src/main.py
           fi
 
-      - name: Zip onedir artifact
+      - name: Zip onedir artifact (python, cross-platform)
         shell: bash
         run: |
-          cd dist
-          zip -r ../${{ matrix.artifact-name }}-onedir.zip ${{ matrix.artifact-name }}
+          python - <<'PY'
+          import shutil, pathlib, sys
+
+          dist = pathlib.Path('dist')
+          name = pathlib.Path("${{ matrix.artifact-name }}")
+          src = dist / name
+          if not src.exists():
+            print(f"Onedir path not found: {src}")
+            sys.exit(1)
+
+          dest = pathlib.Path(f"${{ matrix.artifact-name }}-onedir")
+          shutil.make_archive(str(dest), 'zip', root_dir=src)
+          print(f"Created {dest}.zip from {src}")
+          PY
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -131,8 +143,8 @@ jobs:
           ls -la
           # artifacts are downloaded into directories named after artifact names
           if [ -d "image-interlacement-macos-arm64" ] && [ -d "image-interlacement-macos-x86_64" ]; then
-            ARM_BIN=$(find image-interlacement-macos-arm64 -type f -name "image-interlacement-macos-arm64*" | head -n1)
-            X86_BIN=$(find image-interlacement-macos-x86_64 -type f -name "image-interlacement-macos-x86_64*" | head -n1)
+            ARM_BIN=$(find image-interlacement-macos-arm64 -type f ! -name "*.zip" -name "image-interlacement-macos-arm64*" | head -n1)
+            X86_BIN=$(find image-interlacement-macos-x86_64 -type f ! -name "*.zip" -name "image-interlacement-macos-x86_64*" | head -n1)
             
             if [ -n "$ARM_BIN" ] && [ -n "$X86_BIN" ]; then
               echo "Found ARM binary: $ARM_BIN"
