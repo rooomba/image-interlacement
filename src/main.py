@@ -4,11 +4,15 @@ import argparse
 import sys
 from pathlib import Path
 
-# Support both direct execution (python src/main.py) and package imports (pip install / image-interlacement)
+# Support running as installed module, PyInstaller binary, or plain script
+# Try imports in order: package-relative, absolute within 'src', then plain
 try:
-    from .composite import composite_n_images, interlace
-except ImportError:
-    from composite import composite_n_images, interlace
+    from .composite import composite_n_images, interlace  # when executed as module: python -m src.main
+except Exception:
+    try:
+        from src.composite import composite_n_images, interlace  # when executed as script or frozen
+    except Exception:
+        from composite import composite_n_images, interlace  # fallback for legacy layouts
 
 
 def main():
