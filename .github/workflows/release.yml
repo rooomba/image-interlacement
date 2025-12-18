@@ -60,11 +60,32 @@ jobs:
             pyinstaller --onefile --hidden-import src.composite --name ${{ matrix.artifact-name }} src/main.py
           fi
       
+      - name: Build onedir with PyInstaller
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" = "macOS-x86_64" ]; then
+            arch -x86_64 /usr/bin/python3 -m PyInstaller --onedir --hidden-import src.composite --name ${{ matrix.artifact-name }} src/main.py
+          else
+            pyinstaller --onedir --hidden-import src.composite --name ${{ matrix.artifact-name }} src/main.py
+          fi
+
+      - name: Zip onedir artifact
+        shell: bash
+        run: |
+          cd dist
+          zip -r ../${{ matrix.artifact-name }}-onedir.zip ${{ matrix.artifact-name }}
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact-name }}
           path: dist/${{ matrix.artifact-name }}*
+
+      - name: Upload onedir artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}-onedir
+          path: ${{ matrix.artifact-name }}-onedir.zip
 
   publish-pypi:
     name: Publish to PyPI
@@ -139,9 +160,13 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           files: |
             image-interlacement-linux/image-interlacement-linux
+            image-interlacement-linux-onedir/image-interlacement-linux-onedir.zip
             image-interlacement-macos-arm64/image-interlacement-macos-arm64
+            image-interlacement-macos-arm64-onedir/image-interlacement-macos-arm64-onedir.zip
             image-interlacement-macos-x86_64/image-interlacement-macos-x86_64
+            image-interlacement-macos-x86_64-onedir/image-interlacement-macos-x86_64-onedir.zip
             image-interlacement-windows.exe/image-interlacement-windows.exe
+            image-interlacement-windows.exe-onedir/image-interlacement-windows.exe-onedir.zip
             universal/image-interlacement-macos
           body: |
             ## Installation Options
