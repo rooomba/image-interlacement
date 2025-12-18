@@ -55,9 +55,9 @@ jobs:
         run: |
           if [ "${{ matrix.os }}" = "macOS-x86_64" ]; then
             # Run PyInstaller under x86_64 interpreter to produce an x86_64 binary
-            arch -x86_64 /usr/bin/python3 -m PyInstaller --onefile --name ${{ matrix.artifact-name }} src/main.py
+            arch -x86_64 /usr/bin/python3 -m PyInstaller --onefile --hidden-import src.composite --name ${{ matrix.artifact-name }} src/main.py
           else
-            pyinstaller --onefile --name ${{ matrix.artifact-name }} src/main.py
+            pyinstaller --onefile --hidden-import src.composite --name ${{ matrix.artifact-name }} src/main.py
           fi
       
       - name: Upload artifact
@@ -138,7 +138,10 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           files: |
-            **/image-interlacement-*
+            image-interlacement-linux/image-interlacement-linux
+            image-interlacement-macos-arm64/image-interlacement-macos-arm64
+            image-interlacement-macos-x86_64/image-interlacement-macos-x86_64
+            image-interlacement-windows.exe/image-interlacement-windows.exe
             universal/image-interlacement-macos
           body: |
             ## Installation Options
