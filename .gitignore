@@ -76,3 +76,11 @@ todo.txt
 .test_images
 .github/copilot-instructions.md
 SETUP_COMPLETE.md
+BUILD_EXECUTABLES.md
+
+# Local web UI prototype (do not upload scaffolded UI files)
+ui/
+ui/*
+ui/templates/
+ui/static/
+ui/*.py

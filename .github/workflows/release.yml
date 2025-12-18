@@ -39,12 +39,24 @@ jobs:
       
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[build]"
+          if [ "${{ matrix.os }}" = "macOS-x86_64" ]; then
+            # Ensure Rosetta is available so we can run an x86_64 Python on Apple Silicon runners
+            sudo softwareupdate --install-rosetta --agree-to-license || true
+            arch -x86_64 /usr/bin/python3 -m pip install --upgrade pip
+            arch -x86_64 /usr/bin/python3 -m pip install -e ".[build]"
+          else
+            python -m pip install --upgrade pip
+            pip install -e ".[build]"
+          fi
       
       - name: Build executable with PyInstaller
         run: |
-          pyinstaller --onefile --name ${{ matrix.artifact-name }} src/main.py
+          if [ "${{ matrix.os }}" = "macOS-x86_64" ]; then
+            # Run PyInstaller under x86_64 interpreter to produce an x86_64 binary
+            arch -x86_64 /usr/bin/python3 -m PyInstaller --onefile --name ${{ matrix.artifact-name }} src/main.py
+          else
+            pyinstaller --onefile --name ${{ matrix.artifact-name }} src/main.py
+          fi
       
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -88,6 +100,36 @@ jobs:
       
       - name: Download all artifacts
         uses: actions/download-artifact@v4
+
+      - name: Create universal macOS binary (lipo)
+        if: always()
+        run: |
+          set -e
+          # Look for macOS arm64 and x86_64 artifacts and make a universal binary if present
+          ARM_ART=$(ls | grep image-interlacement-macos-arm64 || true)
+          X86_ART=$(ls | grep image-interlacement-macos-x86_64 || true)
+          if [ -n "$ARM_ART" ] && [ -n "$X86_ART" ]; then
+            mkdir -p universal
+            # Extract the downloaded artifact files (they may be in 'dist/' subdirs)
+            find . -type f -name "image-interlacement-macos-arm64*" -exec cp {} universal/ \;
+            find . -type f -name "image-interlacement-macos-x86_64*" -exec cp {} universal/ \;
+            # locate the actual built files (strip possible extensions)
+            ARM_BIN=$(ls universal | grep image-interlacement-macos-arm64 | head -n1)
+            X86_BIN=$(ls universal | grep image-interlacement-macos-x86_64 | head -n1)
+            if [ -z "$ARM_BIN" ] || [ -z "$X86_BIN" ]; then
+              echo "macOS artifacts not found in download; skipping universal build"
+            else
+              ARM_PATH="universal/$ARM_BIN"
+              X86_PATH="universal/$X86_BIN"
+              # Make output universal binary
+              lipo -create "$ARM_PATH" "$X86_PATH" -output "universal/image-interlacement-macos"
+              chmod +x universal/image-interlacement-macos
+              echo "Created universal binary at universal/image-interlacement-macos"
+              ls -l universal/image-interlacement-macos || true
+            fi
+          else
+            echo "One or both macOS artifacts not present; skipping universal build"
+          fi
       
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -95,6 +137,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           files: |
             **/image-interlacement-*
+            universal/image-interlacement-macos
           body: |
             ## Installation Options
             
