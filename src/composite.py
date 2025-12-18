@@ -2,6 +2,7 @@
 
 from PIL import Image
 import numpy as np
+from math import lcm
 from typing import Literal, List
 
 
@@ -58,6 +59,27 @@ def tile_image(image_array: np.ndarray, target_height: int, target_width: int) -
 # Define a maximum size for input images
 MAX_IMAGE_SIZE = (2000, 2000)  # (width, height)
 
+def compute_target_dimension(sizes: List[int], mode: Literal['max', 'lcm']) -> int:
+    """
+    Compute the target dimension for tiling.
+
+    Args:
+        sizes: List of image dimensions along one axis.
+        mode: 'max' for maximum, 'lcm' for least common multiple.
+
+    Returns:
+        Target dimension as an integer.
+    """
+    if mode == 'max':
+        return max(sizes)
+    elif mode == 'lcm':
+        result = sizes[0]
+        for size in sizes[1:]:
+            result = lcm(result, size)
+        return result
+    else:
+        raise ValueError(f"Tiling mode must be 'max' or 'lcm', got '{mode}'")
+
 def validate_image_size(image: Image.Image) -> None:
     """
     Validate that the image does not exceed the maximum allowed size.
@@ -74,60 +96,86 @@ def validate_image_size(image: Image.Image) -> None:
         )
 
 
-def validate_and_load_images(image_paths: List[str]) -> List[np.ndarray]:
+def validate_and_load_images(
+    image_paths: List[str],
+    tiling_mode: Literal['max', 'lcm'] = 'max',
+    interleave_mode: Literal['rows', 'columns'] = 'rows'
+) -> List[np.ndarray]:
     """
     Load and validate multiple images (supports 'white'/'black'), then tile to match.
 
     - Accepts file paths and the strings 'white' or 'black' for solid colors.
     - Enforces per-image maximum size (2000x2000) for file-based images.
     - Requires at least one real image to define target dimensions.
+    - Supports two tiling modes:
+      - 'max': tile all to the maximum dimension (existing behavior)
+      - 'lcm': tile to the least common multiple of dimensions in the interleave direction
 
     Args:
         image_paths: List of image file paths or 'white'/'black'.
+        tiling_mode: 'max' or 'lcm' for how to compute target dimensions.
+        interleave_mode: 'rows' or 'columns' to determine which dimension to compute LCM on.
 
     Returns:
         List of image arrays with matching dimensions.
 
     Raises:
-        ValueError: If any file image exceeds max size or if no real image is provided.
+        ValueError: If any file image exceeds max size, if no real image is provided,
+                   or if computed LCM target exceeds MAX_IMAGE_SIZE.
     """
     real_images: List[np.ndarray] = []
-    color_flags: List[str] = []
-    max_width, max_height = 0, 0
+    widths: List[int] = []
+    heights: List[int] = []
 
-    # First pass: load real images, remember color placeholders
+    # First pass: load real images and collect dimensions
     for path in image_paths:
         if isinstance(path, str) and path.lower() in ("white", "black"):
-            color_flags.append(path.lower())
             continue
         img = Image.open(path)
         validate_image_size(img)
         img = img.convert("RGB")
         arr = np.array(img)
         real_images.append(arr)
-        max_width = max(max_width, img.width)
-        max_height = max(max_height, img.height)
+        widths.append(img.width)
+        heights.append(img.height)
 
-    if max_width == 0 or max_height == 0:
+    if not real_images:
         raise ValueError("At least one input must be a real image file (not all 'white'/'black').")
+
+    # Compute target dimensions based on tiling mode
+    # In 'lcm' mode we now tile both axes to the least common multiple
+    # (this ensures consistent tiling in both directions).
+    if tiling_mode == 'lcm':
+        target_height = compute_target_dimension(heights, 'lcm')
+        target_width = compute_target_dimension(widths, 'lcm')
+    else:  # max mode
+        target_height = max(heights)
+        target_width = max(widths)
+
+    # Validate computed target does not exceed MAX_IMAGE_SIZE
+    if target_width > MAX_IMAGE_SIZE[0] or target_height > MAX_IMAGE_SIZE[1]:
+        raise ValueError(
+            f"Computed target size {target_width}x{target_height} exceeds the maximum allowed size of "
+            f"{MAX_IMAGE_SIZE[0]}x{MAX_IMAGE_SIZE[1]} pixels. Try using --tile-mode max or smaller images."
+        )
 
     # Build final list following original order, creating solids where requested
     result_images: List[np.ndarray] = []
     real_iter = iter(real_images)
     for path in image_paths:
         if isinstance(path, str) and path.lower() in ("white", "black"):
-            result_images.append(create_solid_image(path, max_width, max_height))
+            result_images.append(create_solid_image(path, target_width, target_height))
         else:
             # Next real image (tile if smaller than target)
             arr = next(real_iter)
-            if arr.shape[0] != max_height or arr.shape[1] != max_width:
-                arr = tile_image(arr, max_height, max_width)
+            if arr.shape[0] != target_height or arr.shape[1] != target_width:
+                arr = tile_image(arr, target_height, target_width)
             result_images.append(arr)
 
     return result_images
 
 
-def composite_rows(image1_path: str, image2_path: str, output_path: str) -> None:
+def composite_rows(image1_path: str, image2_path: str, output_path: str, tiling_mode: Literal['max', 'lcm'] = 'max') -> None:
     """
     Create a composite image by interleaving rows from two images.
     
@@ -138,14 +186,15 @@ def composite_rows(image1_path: str, image2_path: str, output_path: str) -> None
     - Row 3: from image2 row 1
     - etc.
     
-    The output image height will be 2x the input height.
+    The output image height will be 2x the input height (or N times if N images use LCM tiling).
     
     Args:
         image1_path: Path to the first input image
         image2_path: Path to the second input image
         output_path: Path to save the output composite image
+        tiling_mode: 'max' (default) or 'lcm' for tiling strategy
     """
-    images = validate_and_load_images([image1_path, image2_path])
+    images = validate_and_load_images([image1_path, image2_path], tiling_mode=tiling_mode, interleave_mode='rows')
     img1_array, img2_array = images[0], images[1]
     
     height, width = img1_array.shape[:2]
@@ -165,7 +214,7 @@ def composite_rows(image1_path: str, image2_path: str, output_path: str) -> None
     result_image.save(output_path)
 
 
-def composite_columns(image1_path: str, image2_path: str, output_path: str) -> None:
+def composite_columns(image1_path: str, image2_path: str, output_path: str, tiling_mode: Literal['max', 'lcm'] = 'max') -> None:
     """
     Create a composite image by interleaving columns from two images.
     
@@ -176,14 +225,15 @@ def composite_columns(image1_path: str, image2_path: str, output_path: str) -> N
     - Column 3: from image2 column 1
     - etc.
     
-    The output image width will be 2x the input width.
+    The output image width will be 2x the input width (or N times if N images use LCM tiling).
     
     Args:
         image1_path: Path to the first input image
         image2_path: Path to the second input image
         output_path: Path to save the output composite image
+        tiling_mode: 'max' (default) or 'lcm' for tiling strategy
     """
-    images = validate_and_load_images([image1_path, image2_path])
+    images = validate_and_load_images([image1_path, image2_path], tiling_mode=tiling_mode, interleave_mode='columns')
     img1_array, img2_array = images[0], images[1]
     
     height, width = img1_array.shape[:2]
@@ -207,7 +257,8 @@ def composite(
     image1_path: str, 
     image2_path: str, 
     output_path: str, 
-    mode: Literal['rows', 'columns'] = 'rows'
+    mode: Literal['rows', 'columns'] = 'rows',
+    tiling_mode: Literal['max', 'lcm'] = 'max'
 ) -> None:
     """
     Create a composite image by alternating rows or columns from two images.
@@ -217,6 +268,7 @@ def composite(
         image2_path: Path to the second input image
         output_path: Path to save the output composite image
         mode: 'rows' to alternate rows, 'columns' to alternate columns
+        tiling_mode: 'max' (default) or 'lcm' for tiling strategy
         
     Raises:
         ValueError: If mode is not 'rows' or 'columns', or if images don't match
@@ -225,12 +277,12 @@ def composite(
         raise ValueError(f"Mode must be 'rows' or 'columns', got '{mode}'")
     
     if mode == 'rows':
-        composite_rows(image1_path, image2_path, output_path)
+        composite_rows(image1_path, image2_path, output_path, tiling_mode=tiling_mode)
     else:
-        composite_columns(image1_path, image2_path, output_path)
+        composite_columns(image1_path, image2_path, output_path, tiling_mode=tiling_mode)
 
 
-def interlace_rows(image1_path: str, image2_path: str, output_path: str) -> None:
+def interlace_rows(image1_path: str, image2_path: str, output_path: str, tiling_mode: Literal['max', 'lcm'] = 'max') -> None:
     """
     Create a same-size interlaced image by taking alternating rows from two images.
 
@@ -243,8 +295,9 @@ def interlace_rows(image1_path: str, image2_path: str, output_path: str) -> None
         image1_path: Path to the first input image
         image2_path: Path to the second input image
         output_path: Path to save the output interlaced image
+        tiling_mode: 'max' (default) or 'lcm' for tiling strategy
     """
-    images = validate_and_load_images([image1_path, image2_path])
+    images = validate_and_load_images([image1_path, image2_path], tiling_mode=tiling_mode, interleave_mode='rows')
     img1_array, img2_array = images[0], images[1]
 
     height, width = img1_array.shape[:2]
@@ -263,7 +316,7 @@ def interlace_rows(image1_path: str, image2_path: str, output_path: str) -> None
     result_image.save(output_path)
 
 
-def interlace_columns(image1_path: str, image2_path: str, output_path: str) -> None:
+def interlace_columns(image1_path: str, image2_path: str, output_path: str, tiling_mode: Literal['max', 'lcm'] = 'max') -> None:
     """
     Create a same-size interlaced image by taking alternating columns from two images.
 
@@ -276,8 +329,9 @@ def interlace_columns(image1_path: str, image2_path: str, output_path: str) -> N
         image1_path: Path to the first input image
         image2_path: Path to the second input image
         output_path: Path to save the output interlaced image
+        tiling_mode: 'max' (default) or 'lcm' for tiling strategy
     """
-    images = validate_and_load_images([image1_path, image2_path])
+    images = validate_and_load_images([image1_path, image2_path], tiling_mode=tiling_mode, interleave_mode='columns')
     img1_array, img2_array = images[0], images[1]
 
     height, width = img1_array.shape[:2]
@@ -300,7 +354,8 @@ def interlace(
     image1_path: str, 
     image2_path: str, 
     output_path: str, 
-    mode: Literal['rows', 'columns'] = 'rows'
+    mode: Literal['rows', 'columns'] = 'rows',
+    tiling_mode: Literal['max', 'lcm'] = 'max'
 ) -> None:
     """
     Wrapper to call interlace_rows or interlace_columns based on `mode`.
@@ -309,12 +364,12 @@ def interlace(
         raise ValueError(f"Mode must be 'rows' or 'columns', got '{mode}'")
 
     if mode == 'rows':
-        interlace_rows(image1_path, image2_path, output_path)
+        interlace_rows(image1_path, image2_path, output_path, tiling_mode=tiling_mode)
     else:
-        interlace_columns(image1_path, image2_path, output_path)
+        interlace_columns(image1_path, image2_path, output_path, tiling_mode=tiling_mode)
 
 
-def composite_n_images(image_paths: List[str], output_path: str, mode: Literal['rows', 'columns'] = 'rows') -> None:
+def composite_n_images(image_paths: List[str], output_path: str, mode: Literal['rows', 'columns'] = 'rows', tiling_mode: Literal['max', 'lcm'] = 'max') -> None:
     """
     Create a composite image by interleaving rows or columns from multiple images.
 
@@ -322,6 +377,7 @@ def composite_n_images(image_paths: List[str], output_path: str, mode: Literal['
         image_paths: List of input image paths (up to 6).
         output_path: Path to save the output composite image.
         mode: 'rows' to alternate rows, 'columns' to alternate columns.
+        tiling_mode: 'max' (default) or 'lcm' for tiling strategy.
 
     Raises:
         ValueError: If mode is not 'rows' or 'columns', or if more than 6 images are provided.
@@ -333,7 +389,7 @@ def composite_n_images(image_paths: List[str], output_path: str, mode: Literal['
         raise ValueError(f"Mode must be 'rows' or 'columns', got '{mode}'")
 
     # Load and validate images
-    images = validate_and_load_images(image_paths)
+    images = validate_and_load_images(image_paths, tiling_mode=tiling_mode, interleave_mode=mode)
 
     # Determine output dimensions
     height, width = images[0].shape[:2]

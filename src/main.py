@@ -33,6 +33,9 @@ Examples:
     composite_parser.add_argument('--mode', type=str, default='rows', 
                                   choices=['rows', 'columns'],
                                   help='Alternation mode: rows or columns (default: rows)')
+    composite_parser.add_argument('--tile-mode', type=str, default='max',
+                                  choices=['max', 'lcm'],
+                                  help='Tiling mode: max (use largest dimension) or lcm (use least common multiple in interleave direction) (default: max)')
 
     # Interlace command (same-size interlacing)
     interlace_parser = subparsers.add_parser('interlace', help='Interlace two images into a same-size image')
@@ -53,7 +56,7 @@ Examples:
         if args.command == 'composite':
             if not (2 <= len(args.images) <= 6):
                 raise ValueError("Provide between 2 and 6 input images.")
-            composite_n_images(args.images, args.output, args.mode)
+            composite_n_images(args.images, args.output, args.mode, tiling_mode=args.tile_mode)
             print(f"✓ Composite created successfully: {args.output}")
         elif args.command == 'interlace':
             interlace(args.image1, args.image2, args.output, args.mode)

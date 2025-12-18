@@ -1,10 +1,10 @@
-# SIIP (Simple Image Interlacement Program)
+# SIIT (Simple Image Interlacement Tool)
 
 A simple python CLI tool used to interleave images by rows or columns, intended for use in the creation of structures and weave files for the TC2 Loom.
 
-The goal for the program is to create an new method of constructing multi-weft structures for the TC2. I struggle to comprehend the existing methods of manual construction in Photoshop, and built a tool to construct these in the way my brain can conceptualize them. This is a tool that essentially allows you to add interlacement steps one by one. Examples provided.
+The goal for the program is to create an new method of constructing multi-weft structures for the TC2. I struggle to comprehend the existing methods of manual construction in Photoshop, and built a tool to construct these in the way my brain can conceptualize them. This is a tool that essentially allows you to add interlacement steps one by one. Examples provided (see wiki, in progress)
 
-This is not intended to be an all in one design tool, or to replace Photoshop! Simply to help with the creation of multi-weft structures (weft backed weaves, supplemental weft structures like overshot/summer & winter). It also has great applications for the creation of doubleweave structures.
+This is not intended to be an all in one design tool nor to replace Photoshop entirely! Simply to help with the creation of multi-weft structures (weft backed weaves, supplemental weft structures like overshot/summer & winter). It also has great applications for the creation of doubleweave structures.
 
 ## Installation
 
@@ -83,25 +83,40 @@ python src/main.py --help
 
 ### Basic Command format:
 ```bash
-image-interlacement composite [image1] [image2] [outputImage] --mode [rows/colums]
+image-interlacement composite [image1] [image2] ([image3] [image4]...) --output [outputImage] --mode [rows/columns] --tile-mode [max/lcm]
 ```
-
-`image1` and `image2` should be replaced with the filepaths to the structure file images you'd like to use.  
-
-`outputImage` shoudl be replaced with the name/path of where you'd like the composited image to be output.
 
 **Image formats accepted:** `.jpg` `.png` `.bmp` (and more, but these are the only relevant ones to the usecase!)
 
 ### Basic Behavior:
-The the program will interleave the two provided images (starting from the top left), alternating rows/columns from the source images (starting with `image1`). 
+The the program will interleave the two provided images (starting from the top left of the image), alternating rows/columns from the source images (starting with `image1`). 
 
-For example: if two images are being interlaced by rows, the program takes row 0 of `image1` for row 0 of `outputImage`, then takes row 0 of `image2` for row 1 of `outputImage`. Row 1 of `image1` becomes row 2 of `outputImage`, row 1 of `image2` becomes row 3, etc etc etc. `outputImage` will be either twice as tall or wide as the original images depending on the interlacement mode!
+For example: if two images are being interlaced by rows, the program takes row 0 of `image1` for row 0 of `outputImage`, then takes row 0 of `image2` for row 1 of `outputImage`. Row 1 of `image1` becomes row 2 of `outputImage`, row 1 of `image2` becomes row 3, etc etc etc. This behavior is the same regardless of the number of images you use, the process will always proceed in order of the images provided in the command.
 
-***Important note on input structure sizes:*** As the program currently operates, if the input images are of two different sizes, it will tile the smaller image to the same size as the larger image. This can cause unexpected issues in structures if you do not take it into account! I would like to eventually add a mode for least common multiple (LCM) tiling, tiling both images so that they had a full repeat that was getting interleaved, be on the lookout for that! For now, just make sure that you are sizing your input structures properly so that they line up on a full repeat.
+### `image1, image2 etc...`
+Replace with paths to images you would like to interleave.
 
-For example: if your inputs are a 5-end and a 7-end satin, you would want to tile up both images to 35px*35px (35 being the LCM of 5 and 7) so that the program does not attempt to tile the 5-end structure to fit the 7-end structure.
+**Image formats accepted:** `.jpg` `.png` `.bmp` (and more, but these are the only relevant ones to the usecase!)
+
+### A note on multiple (2+) image interleaveing:
+
+Currently, the program allows the user to imput up to 6 images to be interleaeved at once. Support for more is theoretically possible, but memory usage is a concern. An in-progress stride composite feature that allows you to composite images in different patterns will, in practice, allow compositing of much larger numbers of images.
+
+### `--output`
+Replace `[outputImage]` with the file path where you'd like the program to output the image. Must include a file name and format. Example: `--output ./testimages/structure1.png`
+
+### `--mode`
+Fairly self explanatory, `columns` will interleave the images from left to right by columns, `rows` will interleave the images from top to bottom by rows. Required, will throw an error if left out.
+
+### `--tile-mode`(optional)
+the `--tile-mode` option currently has two sub-options, `max` and `lcm`. If the option is not used, the behavior defaults to `max`.
+
+`max`: program detects largest image, automatically tiles all smaller images to match the size of the larger one. It does not pay any regard to the bounds of the smaller images. This is important to remember when you are attempting to create composites of structures with different repeat lengths! For instance: 5-end satin and a 7-end satin composited using `max` tiling mode will have unexpected results!
+
+`lcm`: takes the images, and finds the LCM (least common multiple) of each dimension, then tiles all images to match. This allows you to composite structures with different repeat sizes and maintain those repeats. **Be cautious when using this feature** it may behave in unexpected ways, I have tested it and to the best of my knowledge it works as I intend, but, weave your own swatches to be sure!!
 
 ### Additonal tools/options:
+
 **Solid Color instead of image:**
 The program by default includes the option to replace either one of the input images with a solid white or black. This is most useful when creating doubleweave structures. Simply replace *either*  of the input images with `white` or `black`, the command will output an error if you replace both.
 
@@ -184,13 +199,16 @@ python src/main.py composite photo1.jpg photo2.jpg output.jpg --mode rows
 - **Solution**: Convert images to PNG, JPG, or BMP format. Use an image converter tool.
 
 ## Future additions
-- Support for more than 2 images to interleave simultaneously, this is actually required functionality to use the program for anything other than 2 weft weaves. This is first priority.
 - Support for stride when it comes to the program, to interleave 2 rows from one image, 1 from another, etc.
 - GUI functionality for those less comfortable with a CLI.
 
 ## Support
 
-For issues or questions, please open an issue in the repository!
+For issues or questions, please open an issue in the repository or shoot me a DM/email if you have my contact!
+
+## AI Use
+
+A large majority of this program was written with heavy reliance on GitHub's Copilot AI tool. I believe it is important to disclose AI use when it is present for transparency in my process.
 
 ---
 
