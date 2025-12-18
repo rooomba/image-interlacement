@@ -98,13 +98,13 @@ jobs:
           body: |
             ## Installation Options
             
-            ### Option 1: Via pip (requires Python)
+            ### Primary option:Via pip (requires Python)
             ```bash
             pip install image-interlacement
             ```
             Then use: `image-interlacement composite ...`
             
-            ### Option 2: Download standalone executable (no Python needed)
+            ### Option 2: Download standalone executable (experimental, still troubleshooting)
             Download the appropriate executable for your OS:
             - **macOS (Apple Silicon)**: `image-interlacement-macos-arm64`
             - **macOS (Intel)**: `image-interlacement-macos-x86_64`
@@ -113,6 +113,6 @@ jobs:
             
             Then use: `./image-interlacement-[os] composite ...`
             
-            For full documentation, visit the [README](https://github.com/${{ github.repository }}/blob/main/README.md).
+            For full documentation, visit the [README](https://github.com/${{ github.repository }}).
           draft: false
           prerelease: false
