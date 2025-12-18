@@ -212,5 +212,5 @@ A large majority of this program was written with heavy reliance on GitHub's Cop
 
 ---
 
-**Last Updated**: December 8, 2025  
-**Version**: 0.3.5
+**Last Updated**: December 17, 2025  
+**Version**: 0.5.0

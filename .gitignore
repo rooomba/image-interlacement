@@ -74,3 +74,5 @@ test1_structures/
 RELEASE.md
 todo.txt
 .test_images
+.github/copilot-instructions.md
+SETUP_COMPLETE.md
