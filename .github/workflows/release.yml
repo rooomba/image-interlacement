@@ -38,6 +38,7 @@ jobs:
           python-version: '3.11'
       
       - name: Install dependencies
+        shell: bash
         run: |
           if [ "${{ matrix.os }}" = "macOS-x86_64" ]; then
             # Ensure Rosetta is available so we can run an x86_64 Python on Apple Silicon runners
@@ -50,6 +51,7 @@ jobs:
           fi
       
       - name: Build executable with PyInstaller
+        shell: bash
         run: |
           if [ "${{ matrix.os }}" = "macOS-x86_64" ]; then
             # Run PyInstaller under x86_64 interpreter to produce an x86_64 binary
