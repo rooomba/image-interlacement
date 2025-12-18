@@ -94,7 +94,7 @@ jobs:
 
   create-release:
     name: Create GitHub Release
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     needs: [build-executables, publish-pypi]
     
     steps:
@@ -104,33 +104,33 @@ jobs:
         uses: actions/download-artifact@v4
 
       - name: Create universal macOS binary (lipo)
-        if: always()
         run: |
           set -e
-          # Look for macOS arm64 and x86_64 artifacts and make a universal binary if present
-          ARM_ART=$(ls | grep image-interlacement-macos-arm64 || true)
-          X86_ART=$(ls | grep image-interlacement-macos-x86_64 || true)
-          if [ -n "$ARM_ART" ] && [ -n "$X86_ART" ]; then
-            mkdir -p universal
-            # Extract the downloaded artifact files (they may be in 'dist/' subdirs)
-            find . -type f -name "image-interlacement-macos-arm64*" -exec cp {} universal/ \;
-            find . -type f -name "image-interlacement-macos-x86_64*" -exec cp {} universal/ \;
-            # locate the actual built files (strip possible extensions)
-            ARM_BIN=$(ls universal | grep image-interlacement-macos-arm64 | head -n1)
-            X86_BIN=$(ls universal | grep image-interlacement-macos-x86_64 | head -n1)
-            if [ -z "$ARM_BIN" ] || [ -z "$X86_BIN" ]; then
-              echo "macOS artifacts not found in download; skipping universal build"
-            else
-              ARM_PATH="universal/$ARM_BIN"
-              X86_PATH="universal/$X86_BIN"
-              # Make output universal binary
-              lipo -create "$ARM_PATH" "$X86_PATH" -output "universal/image-interlacement-macos"
+          echo "Looking for macOS artifacts..."
+          ls -la
+          # artifacts are downloaded into directories named after artifact names
+          if [ -d "image-interlacement-macos-arm64" ] && [ -d "image-interlacement-macos-x86_64" ]; then
+            ARM_BIN=$(find image-interlacement-macos-arm64 -type f -name "image-interlacement-macos-arm64*" | head -n1)
+            X86_BIN=$(find image-interlacement-macos-x86_64 -type f -name "image-interlacement-macos-x86_64*" | head -n1)
+            
+            if [ -n "$ARM_BIN" ] && [ -n "$X86_BIN" ]; then
+              echo "Found ARM binary: $ARM_BIN"
+              echo "Found x86_64 binary: $X86_BIN"
+              
+              mkdir -p universal
+              lipo -create "$ARM_BIN" "$X86_BIN" -output "universal/image-interlacement-macos"
               chmod +x universal/image-interlacement-macos
-              echo "Created universal binary at universal/image-interlacement-macos"
-              ls -l universal/image-interlacement-macos || true
+              
+              echo "Created universal binary:"
+              file universal/image-interlacement-macos
+              ls -lh universal/image-interlacement-macos
+            else
+              echo "Could not find binary files in artifact directories"
+              exit 1
             fi
           else
-            echo "One or both macOS artifacts not present; skipping universal build"
+            echo "macOS artifact directories not found; skipping universal build"
+            exit 1
           fi
       
       - name: Create Release
