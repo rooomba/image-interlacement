@@ -3,7 +3,7 @@
 from PIL import Image
 import numpy as np
 from math import lcm
-from typing import Literal, List
+from typing import Literal, List, Optional
 
 
 def create_solid_image(color: str, width: int, height: int) -> np.ndarray:
@@ -369,7 +369,7 @@ def interlace(
         interlace_columns(image1_path, image2_path, output_path, tiling_mode=tiling_mode)
 
 
-def composite_n_images(image_paths: List[str], output_path: str, mode: Literal['rows', 'columns'] = 'rows', tiling_mode: Literal['max', 'lcm'] = 'max') -> None:
+def composite_n_images(image_paths: List[str], output_path: str, mode: Literal['rows', 'columns'] = 'rows', tiling_mode: Literal['max', 'lcm'] = 'max', stride: Optional[List[int]] = None) -> None:
     """
     Create a composite image by interleaving rows or columns from multiple images.
 
@@ -378,6 +378,9 @@ def composite_n_images(image_paths: List[str], output_path: str, mode: Literal['
         output_path: Path to save the output composite image.
         mode: 'rows' to alternate rows, 'columns' to alternate columns.
         tiling_mode: 'max' (default) or 'lcm' for tiling strategy.
+        stride: List of integers specifying how many rows/columns to take from each image.
+                e.g., [1, 2, 1] takes 1 row from img1, 2 from img2, 1 from img3, then repeats.
+                Defaults to [1, 1, ...] (one row/column per image).
 
     Raises:
         ValueError: If mode is not 'rows' or 'columns', or if more than 6 images are provided.
@@ -391,22 +394,53 @@ def composite_n_images(image_paths: List[str], output_path: str, mode: Literal['
     # Load and validate images
     images = validate_and_load_images(image_paths, tiling_mode=tiling_mode, interleave_mode=mode)
 
+    # Default stride: 1 row/column per image
+    if stride is None:
+        stride = [1] * len(images)
+    
+    # Validate stride
+    if len(stride) != len(images):
+        raise ValueError(f"Stride length ({len(stride)}) must match number of images ({len(images)})")
+    if any(s < 1 for s in stride):
+        raise ValueError("All stride values must be at least 1")
+
     # Determine output dimensions
     height, width = images[0].shape[:2]
+    stride_sum = sum(stride)
+    
     if mode == 'rows':
-        output_shape = (height * len(images), width, 3)
+        output_shape = (height * stride_sum, width, 3)
     else:
-        output_shape = (height, width * len(images), 3)
+        output_shape = (height, width * stride_sum, 3)
 
     # Create output array
     output = np.zeros(output_shape, dtype=images[0].dtype)
 
-    # Interleave rows or columns
-    for i, img in enumerate(images):
-        if mode == 'rows':
-            output[i::len(images)] = img
-        else:
-            output[:, i::len(images)] = img
+    # Interleave rows or columns using stride pattern.
+    # Use per-image pointers so repeated counts consume subsequent rows/columns
+    # rather than duplicating the same source row/column.
+    pointers = [0] * len(images)
+
+    if mode == 'rows':
+        out_idx = 0
+        for _ in range(height):
+            for img_i, (img, count) in enumerate(zip(images, stride)):
+                for _ in range(count):
+                    if out_idx < output_shape[0]:
+                        src_r = pointers[img_i] % height
+                        output[out_idx] = img[src_r]
+                        pointers[img_i] = (pointers[img_i] + 1) % height
+                        out_idx += 1
+    else:  # columns
+        out_idx = 0
+        for _ in range(width):
+            for img_i, (img, count) in enumerate(zip(images, stride)):
+                for _ in range(count):
+                    if out_idx < output_shape[1]:
+                        src_c = pointers[img_i] % width
+                        output[:, out_idx] = img[:, src_c]
+                        pointers[img_i] = (pointers[img_i] + 1) % width
+                        out_idx += 1
 
     # Save the result
     result_image = Image.fromarray(output)
