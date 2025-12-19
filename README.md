@@ -100,7 +100,8 @@ Replace with paths to images you would like to interleave.
 
 ### A note on multiple (2+) image interleaveing:
 
-Currently, the program allows the user to imput up to 6 images to be interleaeved at once. Support for more is theoretically possible, but memory usage is a concern. An in-progress stride composite feature that allows you to composite images in different patterns will, in practice, allow compositing of much larger numbers of images.
+Currently, the program allows the user to imput up to 6 images to be interleaeved at once. Support for more is theoretically possible, but memory usage is a concern. An in-progress stride composite feature that allows you to composite images in different patterns will, in practice, allow compositing of much larger numbers of images. Currently able to be utilized on the "stride" branch of the repo.
+
 
 ### `--output`
 Replace `[outputImage]` with the file path where you'd like the program to output the image. Must include a file name and format. Example: `--output ./testimages/structure1.png`
