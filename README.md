@@ -8,7 +8,7 @@ This is not intended to be an all in one design tool nor to replace Photoshop en
 
 ## Installation
 
-Best install method is via pip, standalone executables are in development!
+Best install method is via pip, standalone executables in releases do work, but function much slower!
 
 <!-- ### Option 1: Standalone Executable (Easiest for Non-Technical Users)
 
@@ -51,6 +51,13 @@ cd image-interlacement
 pip install -e .
 image-interlacement --help
 ```
+### From standalone binary
+Download executable from releases page, then run via CLI. Example
+```bash
+./[path to image-interlacement-binary] composite image1.png image2.png --output output.png --tile-mode lcm --mode rows
+```
+
+**NOTE FOR MACOS USERS:** Will trigger a security quarantine on first run, when initial error appears, do not move to trash, then navigate to System Settings > Privacy & Security > Security (scroll to bottom) and allow program to run.
 
 <!-- ### Option 3: Run from Source (For Development)
 
