@@ -97,7 +97,7 @@ image-interlacement composite [image1] [image2] ([image3] [image4]...) --output 
 **Image formats accepted:** `.jpg` `.png` `.bmp` (and more, but these are the only relevant ones to the usecase!)
 
 ### Basic Behavior:
-The the program will interleave the two provided images (starting from the top left of the image), alternating rows/columns from the source images (starting with `image1`). 
+The the program will interleave the two provided images (starting from the bottom left, but test, this directional function is a little iffy sometimes), alternating rows/columns from the source images (starting with `image1`). 
 
 For example: if two images are being interlaced by rows, the program takes row 0 of `image1` for row 0 of `outputImage`, then takes row 0 of `image2` for row 1 of `outputImage`. Row 1 of `image1` becomes row 2 of `outputImage`, row 1 of `image2` becomes row 3, etc etc etc. This behavior is the same regardless of the number of images you use, the process will always proceed in order of the images provided in the command.
 
