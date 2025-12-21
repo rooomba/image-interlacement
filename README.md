@@ -59,6 +59,7 @@ Download executable from releases page, then run via CLI. Example
 
 **NOTE FOR MACOS USERS:** Will trigger a security quarantine on first run, when initial error appears, do not move to trash, then navigate to System Settings > Privacy & Security > Security (scroll to bottom) and allow program to run.
 
+
 <!-- ### Option 3: Run from Source (For Development)
 
 If you're modifying the code:
@@ -90,7 +91,7 @@ python src/main.py --help
 
 ### Basic Command format:
 ```bash
-image-interlacement composite [image1] [image2] ([image3] [image4]...) --output [outputImage] --mode [rows/columns] --tile-mode [max/lcm]
+image-interlacement composite [image1] [image2] ([image3] [image4]...) --output [outputImage] --mode [rows/columns] --tile-mode [max/lcm] --stride [pattern]
 ```
 
 **Image formats accepted:** `.jpg` `.png` `.bmp` (and more, but these are the only relevant ones to the usecase!)
@@ -107,8 +108,9 @@ Replace with paths to images you would like to interleave.
 
 ### A note on multiple (2+) image interleaveing:
 
-Currently, the program allows the user to imput up to 6 images to be interleaeved at once. Support for more is theoretically possible, but memory usage is a concern. An in-progress stride composite feature that allows you to composite images in different patterns will, in practice, allow compositing of much larger numbers of images. Currently able to be utilized on the "stride" branch of the repo.
+Currently, the program allows the user to imput up to 6 images to be interleaeved at once. Support for more is theoretically possible, but memory usage is a concern. An in progress stride function will functionally allow for compositing of much larger numbers of images. You can test it out on the Stride branch of the project.
 
+The usescases for it are likely limited, but you are able to use the same input image multiple times in the same command. It will treat them like separate files. If you were to run the command with `image1.png image2.png image2.png` the output image would consist of row one from `image1` and then row 1 from `image2` twice, then back to `image1` row 2 for the next row.
 
 ### `--output`
 Replace `[outputImage]` with the file path where you'd like the program to output the image. Must include a file name and format. Example: `--output ./testimages/structure1.png`
@@ -122,6 +124,16 @@ the `--tile-mode` option currently has two sub-options, `max` and `lcm`. If the 
 `max`: program detects largest image, automatically tiles all smaller images to match the size of the larger one. It does not pay any regard to the bounds of the smaller images. This is important to remember when you are attempting to create composites of structures with different repeat lengths! For instance: 5-end satin and a 7-end satin composited using `max` tiling mode will have unexpected results!
 
 `lcm`: takes the images, and finds the LCM (least common multiple) of each dimension, then tiles all images to match. This allows you to composite structures with different repeat sizes and maintain those repeats. **Be cautious when using this feature** it may behave in unexpected ways, I have tested it and to the best of my knowledge it works as I intend, but, weave your own swatches to be sure!!
+
+### `--stride` (optional)
+This experimenal feature allows you to combine structures at different ratios, you can define a pattern that you'd like the program to follow when combining images. Simply list the number of rows/columns you'd like the program to take from each image in the same sequence you provided the first section of the command. For example
+
+```bash
+image-interlacement composite image1.png image2.png. image3.png --output out.png --mode columns --stride 1 2 2
+```
+Will output an image consisting of (left to right) row 1 from image1, row 1 from image2, row 2 from image2, row 1 from image3, row 2 from image3, and then row 2 from image1, etc. It's a bit hard to explain in words. Behavior with this function is tested with `--tile-mode lcm` and appears to work as expected, but I'm not fully confident in it. Swatch, test before committing to huge project, etc.
+
+When not included, defaults to the standard behavior, 1 row from each image provided. 
 
 ### Additonal tools/options:
 
