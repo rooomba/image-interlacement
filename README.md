@@ -47,7 +47,7 @@ image-interlacement --help
 Or clone and install from source:
 ```bash
 git clone https://github.com/rooomba/image-interlacement
-cd image-interlacement-program
+cd image-interlacement
 pip install -e .
 image-interlacement --help
 ```
