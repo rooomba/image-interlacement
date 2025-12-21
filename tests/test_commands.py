@@ -55,9 +55,10 @@ def test_composite_rows_interleave_doubled_height(tmp_path):
 
     # height should be doubled
     assert out_img.size == (2, 4)
-    # check alternating rows
-    assert (arr[0, 0] == np.array([10, 10, 10])).all()
-    assert (arr[1, 0] == np.array([200, 200, 200])).all()
+    # check alternating rows with bottom-up consumption + final flip
+    # after bottom-up + flip, first row should come from B (200), then A (10)
+    assert (arr[0, 0] == np.array([200, 200, 200])).all()
+    assert (arr[1, 0] == np.array([10, 10, 10])).all()
 
 
 def test_tiling_smaller_image(tmp_path):

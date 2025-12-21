@@ -205,10 +205,21 @@ def composite_rows(image1_path: str, image2_path: str, output_path: str, tiling_
     else:
         output = np.zeros((height * 2, width), dtype=img1_array.dtype)
     
-    # Interleave rows: odd rows from img1, even rows from img2
-    output[::2] = img1_array   # Rows 0, 2, 4, ... from image1
-    output[1::2] = img2_array  # Rows 1, 3, 5, ... from image2
-    
+    # Interleave rows starting from the bottom of each source image using
+    # per-image pointers so repeated rows consume subsequent rows upward.
+    pointers = [height - 1, height - 1]
+    out_idx = 0
+    for _ in range(height):
+        for img_i, img in enumerate((img1_array, img2_array)):
+            if out_idx < output.shape[0]:
+                src_r = pointers[img_i] % height
+                output[out_idx] = img[src_r]
+                pointers[img_i] = (pointers[img_i] - 1) % height
+                out_idx += 1
+
+    # Final vertical reflection (flip top/bottom) as the last operation
+    output = output[::-1]
+
     # Save the result
     result_image = Image.fromarray(output)
     result_image.save(output_path)
@@ -417,11 +428,11 @@ def composite_n_images(image_paths: List[str], output_path: str, mode: Literal['
     output = np.zeros(output_shape, dtype=images[0].dtype)
 
     # Interleave rows or columns using stride pattern.
-    # Use per-image pointers so repeated counts consume subsequent rows/columns
-    # rather than duplicating the same source row/column.
-    pointers = [0] * len(images)
-
+    # Initialize per-image pointers to start from bottom for rows (height-1)
+    # and from rightmost for columns (width-1). Decrement pointers so we
+    # move upward/leftward through each source image.
     if mode == 'rows':
+        pointers = [height - 1] * len(images)
         out_idx = 0
         for _ in range(height):
             for img_i, (img, count) in enumerate(zip(images, stride)):
@@ -429,9 +440,10 @@ def composite_n_images(image_paths: List[str], output_path: str, mode: Literal['
                     if out_idx < output_shape[0]:
                         src_r = pointers[img_i] % height
                         output[out_idx] = img[src_r]
-                        pointers[img_i] = (pointers[img_i] + 1) % height
+                        pointers[img_i] = (pointers[img_i] - 1) % height
                         out_idx += 1
     else:  # columns
+        pointers = [width - 1] * len(images)
         out_idx = 0
         for _ in range(width):
             for img_i, (img, count) in enumerate(zip(images, stride)):
@@ -439,8 +451,12 @@ def composite_n_images(image_paths: List[str], output_path: str, mode: Literal['
                     if out_idx < output_shape[1]:
                         src_c = pointers[img_i] % width
                         output[:, out_idx] = img[:, src_c]
-                        pointers[img_i] = (pointers[img_i] + 1) % width
+                        pointers[img_i] = (pointers[img_i] - 1) % width
                         out_idx += 1
+
+    # For rows-mode, apply final vertical reflection (flip top/bottom) as the last operation
+    if mode == 'rows':
+        output = output[::-1]
 
     # Save the result
     result_image = Image.fromarray(output)
