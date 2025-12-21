@@ -131,7 +131,7 @@ This experimenal feature allows you to combine structures at different ratios, y
 ```bash
 image-interlacement composite image1.png image2.png. image3.png --output out.png --mode columns --stride 1 2 2
 ```
-Will output an image consisting of (left to right) row 1 from image1, row 1 from image2, row 2 from image2, row 1 from image3, row 2 from image3, and then row 2 from image1, etc. It's a bit hard to explain in words. Behavior with this function is tested with `--tile-mode lcm` and appears to work as expected, but I'm not fully confident in it. Swatch, test before committing to huge project, etc.
+Will output an image consisting of (left to right) row 1 from image1, row 1 from image2, row 2 from image2, row 1 from image3, row 2 from image3, and then row 2 from image1, etc. It's a bit hard to explain in words. Behavior with this function is tested with `--tile-mode lcm` and appears to work as expected. Swatch, test before committing to huge project, etc.
 
 When not included, defaults to the standard behavior, 1 row from each image provided. 
 
@@ -232,5 +232,5 @@ A large majority of this program was written with heavy reliance on GitHub's Cop
 
 ---
 
-**Last Updated**: December 17, 2025  
-**Version**: 0.5.0
+**Last Updated**: December 21, 2025  
+**Version**: 1.0.0
