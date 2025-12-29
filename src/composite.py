@@ -57,7 +57,7 @@ def tile_image(image_array: np.ndarray, target_height: int, target_width: int) -
 
 
 # Define a maximum size for input images
-MAX_IMAGE_SIZE = (2000, 2000)  # (width, height)
+MAX_IMAGE_SIZE = (5000, 5000)  # (width, height)
 
 def compute_target_dimension(sizes: List[int], mode: Literal['max', 'lcm']) -> int:
     """

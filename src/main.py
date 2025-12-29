@@ -2,17 +2,16 @@
 
 import argparse
 import sys
-from pathlib import Path
 
 # Support running as installed module, PyInstaller binary, or plain script
 # Try imports in order: package-relative, absolute within 'src', then plain
 try:
-    from .composite import composite_n_images, interlace  # when executed as module: python -m src.main
+    from .composite import composite_n_images  # when executed as module: python -m src.main
 except Exception:
     try:
-        from src.composite import composite_n_images, interlace  # when executed as script or frozen
+        from src.composite import composite_n_images  # when executed as script or frozen
     except Exception:
-        from composite import composite_n_images, interlace  # fallback for legacy layouts
+        from composite import composite_n_images  # fallback for legacy layouts
 
 
 def main():
@@ -22,52 +21,39 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-    python main.py composite img1.png img2.png --output out.png --mode rows
-    python main.py composite img1.png img2.png img3.png --output out.png --mode columns
-    python main.py composite img1.png img2.png img3.png img4.png img5.png img6.png --output out.png --mode rows
+    python main.py img1.png img2.png --output out.png --mode rows
+    python main.py img1.png img2.png img3.png --output out.png --mode columns
+    python main.py img1.png img2.png img3.png img4.png img5.png img6.png --output out.png --mode rows
         """
     )
-    
-    subparsers = parser.add_subparsers(dest='command', help='Available commands')
-    
-    # Composite command
-    composite_parser = subparsers.add_parser('composite', help='Create a composite from multiple images (2-6)')
-    composite_parser.add_argument('images', nargs='+', type=str, help='Input image paths (2-6); accepts "white"/"black" as solid colors')
-    composite_parser.add_argument('--output', required=True, type=str, help='Output image path (required)')
-    composite_parser.add_argument('--mode', type=str, default='rows', 
-                                  choices=['rows', 'columns'],
-                                  help='Alternation mode: rows or columns (default: rows)')
-    composite_parser.add_argument('--tile-mode', type=str, default='max',
-                                  choices=['max', 'lcm'],
-                                  help='Tiling mode: max (use largest dimension) or lcm (use least common multiple in interleave direction) (default: max)')
-    composite_parser.add_argument('--stride', type=int, nargs='+', 
-                                  help='Pattern of rows/columns to take from each image (e.g., --stride 1 2 1 means 1 from img1, 2 from img2, 1 from img3, repeat). Defaults to 1 per image.')
 
-    # Interlace command (same-size interlacing)
-    interlace_parser = subparsers.add_parser('interlace', help='Interlace two images into a same-size image')
-    interlace_parser.add_argument('image1', type=str, help='First input image path, or "white"/"black" for solid color')
-    interlace_parser.add_argument('image2', type=str, help='Second input image path, or "white"/"black" for solid color')
-    interlace_parser.add_argument('output', type=str, help='Output image path')
-    interlace_parser.add_argument('--mode', type=str, default='rows', 
-                                  choices=['rows', 'columns'],
-                                  help='Interlace mode: rows or columns (default: rows)')
-    
-    args = parser.parse_args()
-    
-    if not args.command:
+    parser.add_argument('images', nargs='+', type=str, help='Input image paths (2-6); accepts "white"/"black" as solid colors')
+    parser.add_argument('--output', required=True, type=str, help='Output image path (required)')
+    parser.add_argument('--mode', type=str, default='rows',
+                        choices=['rows', 'columns'],
+                        help='Alternation mode: rows or columns (default: rows)')
+    parser.add_argument('--tile-mode', type=str, default='max',
+                        choices=['max', 'lcm'],
+                        help='Tiling mode: max (use largest dimension) or lcm (use least common multiple, for full pattern repeats) (default: max)')
+    parser.add_argument('--stride', type=int, nargs='+',
+                        help='Pattern of rows/columns to take from each image (e.g., --stride 1 2 1 means 1 from img1, 2 from img2, 1 from img3, repeat). Defaults to 1 per image.')
+
+    raw_args = sys.argv[1:]
+    if not raw_args:
         parser.print_help()
         return 1
+    if raw_args[0] in ('-h', '--help'):
+        # Let argparse handle the standard help flow
+        parser.parse_args(raw_args)
+        return 0
+    args = parser.parse_args(raw_args)
     
     try:
-        if args.command == 'composite':
-            if not (2 <= len(args.images) <= 6):
-                raise ValueError("Provide between 2 and 6 input images.")
-            stride = args.stride if hasattr(args, 'stride') and args.stride else None
-            composite_n_images(args.images, args.output, args.mode, tiling_mode=args.tile_mode, stride=stride)
-            print(f"✓ Composite created successfully: {args.output}")
-        elif args.command == 'interlace':
-            interlace(args.image1, args.image2, args.output, args.mode)
-            print(f"✓ Interlaced image created successfully: {args.output}")
+        if not (2 <= len(args.images) <= 6):
+            raise ValueError("Provide between 2 and 6 input images.")
+        stride = args.stride if hasattr(args, 'stride') and args.stride else None
+        composite_n_images(args.images, args.output, args.mode, tiling_mode=args.tile_mode, stride=stride)
+        print(f"✓ Composite created successfully: {args.output}")
     except FileNotFoundError as e:
         print(f"✗ Error: File not found - {e}", file=sys.stderr)
         return 1
