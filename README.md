@@ -91,7 +91,7 @@ python src/main.py --help
 
 ### Basic Command format:
 ```bash
-image-interlacement composite [image1] [image2] ([image3] [image4]...) --output [outputImage] --mode [rows/columns] --tile-mode [max/lcm] --stride [pattern]
+image-interlacement [image1] [image2] ([image3] [image4]...) --output [outputImage] --mode [rows/columns] --tile-mode [max/lcm] --stride [pattern]
 ```
 
 **Image formats accepted:** `.jpg` `.png` `.bmp` (and more, but these are the only relevant ones to the usecase!)
@@ -105,6 +105,8 @@ For example: if two images are being interlaced by rows, the program takes row 0
 Replace with paths to images you would like to interleave.
 
 **Image formats accepted:** `.jpg` `.png` `.bmp` (and more, but these are the only relevant ones to the usecase!)
+
+**Maximum image size:** 5000px * 5000px, please be careful when using images this large, could very easily cause large strain on your computer's system! If you're using only black and white images (as you would for structures) it is much less stressful on your system. But, when you're dealing with loom wide images on TC2s with more than 4-6 modules the sizes do get up there.
 
 ### A note on multiple (2+) image interleaveing:
 
@@ -129,7 +131,7 @@ the `--tile-mode` option currently has two sub-options, `max` and `lcm`. If the 
 This experimenal feature allows you to combine structures at different ratios, you can define a pattern that you'd like the program to follow when combining images. Simply list the number of rows/columns you'd like the program to take from each image in the same sequence you provided the first section of the command. For example
 
 ```bash
-image-interlacement composite image1.png image2.png. image3.png --output out.png --mode columns --stride 1 2 2
+image-interlacement image1.png image2.png. image3.png --output out.png --mode columns --stride 1 2 2
 ```
 Will output an image consisting of (left to right) row 1 from image1, row 1 from image2, row 2 from image2, row 1 from image3, row 2 from image3, and then row 2 from image1, etc. It's a bit hard to explain in words. Behavior with this function is tested with `--tile-mode lcm` and appears to work as expected. Swatch, test before committing to huge project, etc.
 
@@ -142,7 +144,7 @@ The program by default includes the option to replace either one of the input im
 
 Example:
 ```bash
-image-interlacement composite image1.png white output.png --mode columns
+image-interlacement image1.png white output.png --mode columns
 ```
 
 <!-- #### Create a Row-based Composite
