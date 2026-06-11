@@ -176,14 +176,6 @@ python src/main.py composite image1.png image2.png output.png --mode columns
 Pattern: Output columns are interleaved - Column 0 from image1, Column 1 from image2, Column 2 from image1, etc.
 The output width will be **2x the input width**. -->
 
-## Dependencies
-
-| Package | Version | Purpose |
-|---------|---------|---------|
-| Pillow | >=9.0.0 | Image processing and manipulation |
-| NumPy | >=1.21.0 | Efficient array operations for pixel manipulation |
-
-
 <!-- ### Running the Program
 
 ```bash
